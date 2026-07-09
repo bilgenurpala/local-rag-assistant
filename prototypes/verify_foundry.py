@@ -1,4 +1,4 @@
-﻿from foundry_local_sdk import Configuration, FoundryLocalManager
+from foundry_local_sdk import Configuration, FoundryLocalManager
 
 # 1. Initialize the local runtime (starts the service if needed).
 config = Configuration(app_name='local_rag_assistant')
