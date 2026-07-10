@@ -109,3 +109,46 @@ correct generate_embedding method were all discovered.
   list. Fixed by using the singular generate_embedding for one text.
 - **PowerShell blocked venv activation** (execution policy). Resolved with
   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned.
+
+### Decision: Implement cosine similarity by hand (Issue #7)
+**Context:** The retrieval step needs to measure how close two embedding vectors
+are. A library (e.g. numpy) could do this, but this is the single most important
+concept in RAG.
+**Decision:** Wrote cosine_similarity() manually — dot product divided by the
+product of both vector norms.
+**Rationale:** Understanding the math (direction, not magnitude, determines
+semantic closeness) matters more here than convenience. Keeps the POC dependency-free.
+**Outcome:** Confirmed working. For the query "What do cats like to drink?", the
+sentence "Cats drink milk." scored highest (0.713) despite sharing no word with
+the query — proving semantic (not keyword) search works.
+
+### Challenges encountered (Issue #7)
+- **Model 'qwen3-embedding-0.6b' is not loaded.** Skipping model.download() left
+  the model not fully ready. Fixed by calling download() before load(), matching
+  the working pattern from embedding_poc.py (#6). download() is cheap once cached.
+- **NameError: name 'client' is not defined.** An edit accidentally removed the
+  client = model.get_embedding_client() line. Lesson: NameError means the variable
+  was never created (distinct from a NoneType error). Re-check the file with git
+  diff after edits.
+- **VS Code save conflict.** The on-disk and in-editor versions diverged; resolved
+  via Compare, keeping the complete version.
+- **Silent exit (no output).** Debugged by adding trace prints to locate where
+  execution stopped.
+
+### Decision: Store vectors as JSON text in SQLite (Issue #8)
+**Context:** Embedding vectors are lists of floats, but SQLite columns hold only
+simple types (text, integer, blob), not Python lists.
+**Decision:** Serialize each vector to JSON text with json.dumps on write, and
+parse it back with json.loads on read. Table: chunks(id, content, embedding).
+**Rationale:** For this project's small scale, JSON-in-a-TEXT-column is simple and
+dependency-free; a dedicated vector database would be overkill. Parameterized
+INSERT (VALUES (?, ?)) is used to insert values safely.
+**Outcome:** Confirmed working — a row (text + vector) was written and read back,
+with the vector correctly restored to a list of numbers.
+
+### Challenges encountered (Issue #8)
+- **Silent exit (no output).** The file hadn't been saved; the script ran an empty
+  version. Resolved by saving in VS Code, then re-running.
+- **Duplicate rows on re-run.** Each run executes INSERT again, so repeated runs
+  accumulated identical rows. Not a bug — it confirms persistence. A re-population
+  strategy for ingest.py will be decided in Sprint 2.
