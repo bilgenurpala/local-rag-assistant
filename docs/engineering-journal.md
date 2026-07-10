@@ -152,3 +152,13 @@ with the vector correctly restored to a list of numbers.
 - **Duplicate rows on re-run.** Each run executes INSERT again, so repeated runs
   accumulated identical rows. Not a bug — it confirms persistence. A re-population
   strategy for ingest.py will be decided in Sprint 2.
+
+### Decision: Use a system message to constrain the model (Issue #9)
+**Context:** A RAG answer must come from retrieved context, not the model's own
+guesses. A small model (qwen2.5-0.5b) is inconsistent when asked about unknown facts.
+**Decision:** Put the retrieved context and a rule — "answer using ONLY the context;
+if it's not there, say I don't know" — in a system message, separate from the user's question.
+**Rationale:** The system role sets behaviour; separating instructions from the
+question keeps the model grounded and reduces hallucination.
+**Outcome:** Confirmed. For an unknown item, the no-context answer was vague/evasive;
+with context + instruction, the model answered correctly and concisely ("Apache 2.0").
