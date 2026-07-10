@@ -162,3 +162,24 @@ if it's not there, say I don't know" — in a system message, separate from the 
 question keeps the model grounded and reduces hallucination.
 **Outcome:** Confirmed. For an unknown item, the no-context answer was vague/evasive;
 with context + instruction, the model answered correctly and concisely ("Apache 2.0").
+
+---
+
+## Sprint 2 — Ingestion & Retrieval
+
+### Decision: Author the knowledge base as chunk-friendly documents (Issue #10)
+**Context:** ingest.py will split documents by paragraph (blank-line separated).
+Whatever unit the splitter produces is exactly what the embedding model sees and
+what the chat model receives as context — so document formatting IS retrieval design.
+**Decision:** Compiled four short .md files under data/ from the official Foundry
+Local docs, with three authoring rules: no markdown headings (they would become
+useless tiny chunks), every paragraph self-contained and explicitly naming
+"Foundry Local" (no dangling pronouns), one topic per paragraph.
+**Rationale:** Each paragraph is written to answer one question type (e.g. "Is an
+Azure subscription required?"), so a query's embedding lands cleanly on one chunk.
+Prose is used instead of code blocks because natural-language questions embed
+closer to prose than to code.
+**Outcome:** ~19 paragraphs across 4 files, ready for ingestion. Content sourced
+from learn.microsoft.com (June 2026 revision), including the nuance that Foundry
+Local still uses the network for model/EP downloads — kept in the KB to prevent
+the model from over-claiming "no internet ever".
