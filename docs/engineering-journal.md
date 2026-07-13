@@ -203,3 +203,29 @@ with no benefit at this scale.
   generate_embedding returns a response envelope, not the raw vector. The vector
   lives at response.data[0].embedding (OpenAI-compatible response shape).
   Splitting chained access into intermediate variables made the traceback readable.
+
+### Decision: Inject the embedding client into get_top_chunks (Issue #12)
+**Context:** get_top_chunks needs an embedding client, and loading a model is
+expensive. Sprint 3's Q&A loop will call this function once per user question.
+**Decision:** The client is a parameter, not created inside the function. The
+Sprint 1 cosine_similarity was promoted from the POC into src/retrieve.py.
+**Rationale:** Create-once-pass-many keeps per-question latency low, and tests
+can pass a fake client so retrieval logic is testable without the model.
+**Outcome:** Three-question evaluation returned sensible rankings with scores
+around 0.68–0.84.
+
+### Learning: knowledge base wording is part of retrieval quality (Issue #12)
+**Context:** "Which platforms does Foundry Local support?" missed its target
+chunk — the paragraph listed the OS names but never said the word "platforms",
+while generic intro paragraphs scored "a bit similar to everything".
+**Resolution:** Reworded the paragraph to "supports three platforms: ...",
+re-ran the idempotent ingest, and the chunk entered top-3. Full loop learned:
+author docs → ingest → retrieve → evaluate → improve docs. Top-K acts as a
+buffer: the answer doesn't need rank 1, it needs to be inside the top K.
+
+### Challenges encountered (Issue #12)
+- **Three questions silently merged into one.** Missing commas in the list
+  literal triggered implicit string concatenation (["A" "B"] == ["AB"]) — the
+  same feature used deliberately to split long SQL strings in ingest.py. No
+  error is raised; only the odd output revealed it. Habit adopted: trailing
+  commas on every list line.
