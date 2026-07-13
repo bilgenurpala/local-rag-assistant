@@ -1,4 +1,4 @@
-Foundry Local supports Windows, macOS on Apple silicon, and Linux. On Windows, the SDK integrates with the Windows ML runtime, which provides the same API surface with a wider breadth of hardware acceleration.
+Foundry Local supports three platforms: Windows, macOS on Apple silicon, and Linux. On Windows, the SDK integrates with the Windows ML runtime, which provides the same API surface with a wider breadth of hardware acceleration.
 
 Foundry Local provides a curated catalog of high-quality models optimized for on-device use across a wide range of consumer hardware. The catalog covers chat completion models such as GPT OSS, Qwen, DeepSeek, Mistral, and Phi, as well as audio transcription models such as Whisper.
 
