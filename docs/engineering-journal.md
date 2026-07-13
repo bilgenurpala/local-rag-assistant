@@ -183,3 +183,23 @@ closer to prose than to code.
 from learn.microsoft.com (June 2026 revision), including the nuance that Foundry
 Local still uses the network for model/EP downloads — kept in the KB to prevent
 the model from over-claiming "no internet ever".
+
+### Decision: Idempotent rebuild for ingestion (Issue #11)
+**Context:** Sprint 1 (#8) showed that re-running an INSERT script accumulates
+duplicate rows. ingest.py will be re-run every time the knowledge base changes.
+**Decision:** setup_database() runs CREATE TABLE IF NOT EXISTS followed by
+DELETE FROM chunks, so every run starts from an empty table. Combined with
+sorted document loading, the same input always produces the same database.
+**Rationale:** Deleting and rebuilding ~20 rows is trivially cheap; the
+alternatives (checking for duplicates, or updating changed rows) add complexity
+with no benefit at this scale.
+**Outcome:** Verified — two consecutive runs both ended at 20 chunks.
+
+### Challenges encountered (Issue #11)
+- **Silent exit, new cause.** The `if __name__ == "__main__":` guard was
+  accidentally indented inside main(), so main() was never called. The guard
+  must sit at zero indentation; in Python, indentation IS scope.
+- **TypeError: Object of type CreateEmbeddingResponse is not JSON serializable.**
+  generate_embedding returns a response envelope, not the raw vector. The vector
+  lives at response.data[0].embedding (OpenAI-compatible response shape).
+  Splitting chained access into intermediate variables made the traceback readable.
