@@ -1,0 +1,64 @@
+"""Answer questions using retrieved knowledge base context.
+
+Retrieves the top-K chunks for a question, packs them into a single
+context block inside the system message, and asks the local chat model.
+"""
+
+from retrieve import get_top_chunks
+from foundry_local_sdk import FoundryLocalManager
+
+from ingest import setup_embedding_client
+
+CHAT_MODEL = "qwen2.5-0.5b"
+
+SYSTEM_PROMPT = (
+    "You are a helpful assistant for Microsoft Foundry Local documentation.\n"
+    "Answer using ONLY the context below.\n"
+    "If the answer is not in the context, say \"I don't know\".\n"
+    "\n"
+    "Context:\n"
+    "{context}"
+)
+
+
+def build_context(chunks: list[tuple[float, str]]) -> str:
+    """Join retrieved (score, content) pairs into one context block."""
+    return "\n\n---\n\n".join(content for score, content in chunks)
+
+def setup_chat_client():
+    """Return the chat model and client from the already-initialized manager."""
+    manager = FoundryLocalManager.instance
+    model = manager.catalog.get_model(CHAT_MODEL)
+    if model is None:
+        raise RuntimeError(f"Model not found in catalog: {CHAT_MODEL}")
+    model.download()
+    model.load()
+    return model, model.get_chat_client()
+
+
+def answer_query(question: str, embedding_client, chat_client) -> str:
+    """Answer a question using only retrieved documentation context."""
+    top_chunks = get_top_chunks(question, embedding_client)
+    context = build_context(top_chunks)
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT.format(context=context)},
+        {"role": "user", "content": question},
+    ]
+    response = chat_client.complete_chat(messages)
+    return response.choices[0].message.content
+
+
+def main() -> None:
+    embedding_model, embedding_client = setup_embedding_client()
+    chat_model, chat_client = setup_chat_client()
+
+    question = "Do I need an Azure subscription to use Foundry Local?"
+    print(f"Q: {question}")
+    print(f"A: {answer_query(question, embedding_client, chat_client)}")
+
+    chat_model.unload()
+    embedding_model.unload()
+
+
+if __name__ == "__main__":
+    main()
