@@ -11,10 +11,15 @@ from ingest import setup_embedding_client
 
 CHAT_MODEL = "qwen2.5-0.5b"
 
+FALLBACK_ANSWER = "I don't know based on the provided documentation."
+SIMILARITY_THRESHOLD = 0.6
+
 SYSTEM_PROMPT = (
     "You are a helpful assistant for Microsoft Foundry Local documentation.\n"
     "Answer using ONLY the context below.\n"
-    "If the answer is not in the context, say \"I don't know\".\n"
+    "If the context does not actually answer the question, reply with exactly:\n"
+    f'"{FALLBACK_ANSWER}"\n'
+    "Do not use outside knowledge. Do not guess.\n"
     "\n"
     "Context:\n"
     "{context}"
@@ -39,6 +44,8 @@ def setup_chat_client():
 def answer_query(question: str, embedding_client, chat_client) -> str:
     """Answer a question using only retrieved documentation context."""
     top_chunks = get_top_chunks(question, embedding_client)
+    if not top_chunks or top_chunks[0][0] < SIMILARITY_THRESHOLD:
+        return FALLBACK_ANSWER
     context = build_context(top_chunks)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT.format(context=context)},
@@ -52,9 +59,15 @@ def main() -> None:
     embedding_model, embedding_client = setup_embedding_client()
     chat_model, chat_client = setup_chat_client()
 
-    question = "Do I need an Azure subscription to use Foundry Local?"
-    print(f"Q: {question}")
-    print(f"A: {answer_query(question, embedding_client, chat_client)}")
+    questions = [
+        "Do I need an Azure subscription to use Foundry Local?",
+        "What is the capital of Turkey?",
+        "How do I make sourdough bread?",
+        "What is the best Python web framework?",
+    ]
+    for question in questions:
+        print(f"Q: {question}")
+        print(f"A: {answer_query(question, embedding_client, chat_client)}")
 
     chat_model.unload()
     embedding_model.unload()
