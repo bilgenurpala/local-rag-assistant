@@ -1,24 +1,165 @@
-﻿# Local RAG Assistant
+# Local RAG Assistant
 
-An offline, document-grounded question-answering (RAG) assistant that runs
-entirely on-device using Microsoft Foundry Local. Built as a Microsoft
-internship capstone project.
+An offline, document-grounded question-answering assistant that runs entirely
+on-device using Microsoft Foundry Local. Built as a Microsoft internship
+capstone project.
 
 The assistant answers questions about Microsoft Foundry Local's own
-documentation. If the answer is not found in the knowledge base, it says so
-instead of guessing.
+documentation. Retrieval and generation both happen on local hardware — after a
+one-time model download, no network connection is required and no data leaves
+the machine. When the knowledge base does not contain the answer, the assistant
+says so instead of guessing.
 
-## Status
-Under development (Sprint 0 — environment setup).
+```
+> Do I need an Azure subscription to use Foundry Local?
 
-## Tech Stack
-- Python
-- Microsoft Foundry Local (on-device model inference)
-- SQLite (local text + vector storage)
-- Embedding-based semantic search
+No, Foundry Local does not require an Azure subscription. It runs entirely on
+local hardware.
+
+> How do I make sourdough bread?
+
+I don't know based on the provided documentation.
+```
+
+## How it works
+
+The project implements the Retrieval-Augmented Generation pattern:
+
+1. **Ingest** (`src/ingest.py`) — read the Markdown files in `data/`, split them
+   into paragraph chunks, embed each chunk, store the text and its vector in
+   SQLite.
+2. **Retrieve** (`src/retrieve.py`) — embed the question, score it against every
+   stored chunk with cosine similarity, return the top 3.
+3. **Answer** (`src/answer.py`) — if the best score clears the similarity
+   threshold, pass the retrieved chunks to the chat model as context and
+   generate an answer; otherwise return a fixed refusal without calling the
+   model at all.
+4. **Interface** (`src/main.py`) — an interactive command-line loop.
+
+See [`docs/architecture.md`](docs/architecture.md) for the design rationale and
+diagrams.
+
+## Configuration
+
+| Layer | Setting |
+|---|---|
+| Chat model | `qwen2.5-1.5b` |
+| Embedding model | `qwen3-embedding-0.6b` (1024-dim) |
+| Similarity threshold | `0.5` |
+| Top-K | `3` |
+| Knowledge base | 21 chunks across 4 files |
+| Vector storage | JSON text in SQLite, brute-force cosine similarity |
+
+These values were not chosen up front — they are the result of the measured
+tuning described in [`docs/evaluation.md`](docs/evaluation.md).
+
+## Requirements
+
+- Windows (the setup below is the tested path; see [Limitations](#limitations))
+- Python 3.11+ — this project was developed on **3.12**, which is required by
+  the `onnxruntime` wheels the Foundry Local SDK depends on
+- An internet connection for the first run only. Both models are downloaded and
+  cached by the Foundry Local runtime on first use; subsequent runs are fully
+  offline.
 
 ## Setup
-_To be completed in Sprint 4._
+
+```powershell
+git clone https://github.com/bilgenurpala/local-rag-assistant.git
+cd local-rag-assistant
+
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+```
+
+Then build the knowledge base:
+
+```powershell
+python src\ingest.py
+```
+
+This downloads the embedding model on first run, chunks every `.md` and `.txt`
+file in `data/`, and writes `rag.db`. Expect the first run to take several
+minutes; later runs take seconds. Ingestion is idempotent — it clears the table
+and rebuilds it, so re-running never produces duplicate chunks.
+
+## Usage
+
+```powershell
+python src\main.py
+```
+
+Ask a question at the `>` prompt. Type `exit` or `quit` to leave. The first
+question of a session is slower than the rest, because the chat model is loaded
+before the loop starts.
+
+> **Run every script from the repository root.** `rag.db` and `data/` are
+> resolved relative to the working directory, so `cd src` and then
+> `python main.py` will not find them.
+
+To add your own documents, drop `.md` or `.txt` files into `data/` and re-run
+`python src\ingest.py`. Paragraphs are separated by blank lines, so short,
+single-topic paragraphs retrieve better than long multi-topic ones.
+
+## Tests
+
+```powershell
+pytest
+```
+
+The suite covers chunking, retrieval scoring, the similarity threshold
+boundary, and context passing. `pytest.ini` puts `src/` on the path, so no
+installation step is needed.
+
+## Repository layout
+
+```
+local-rag-assistant/
+├── src/                        Application code
+│   ├── main.py                 CLI entry point
+│   ├── ingest.py               Document ingestion and vectorization
+│   ├── retrieve.py             Semantic retrieval
+│   └── answer.py               Answer generation and grounding
+├── tests/                      pytest suite
+├── data/                       Knowledge base documents
+├── prototypes/                 Component proof-of-concept scripts
+└── docs/
+    ├── architecture.md         Design document and diagrams
+    ├── engineering-journal.md  Technical decisions and their rationale
+    ├── evaluation.md           Test method, results, failure analysis
+    └── technical-report.md     Final report
+```
+
+`rag.db` is generated by ingestion and is not tracked in version control.
+
+## Limitations
+
+Measured against a ten-question test set, the assistant scores **8/10**. The
+full method, results and failure analysis are in
+[`docs/evaluation.md`](docs/evaluation.md); the short version:
+
+- **Both failures are confident wrong answers, not refusals.** One question is
+  answered from a chunk that does not contain the answer; another is answered by
+  composing plausible-sounding steps from unrelated context. This is the more
+  damaging failure mode, and it is the main open problem.
+- **No source attribution.** Answers do not name the file they came from,
+  because the `chunks` table stores no source column.
+- **Retrieval is purely semantic.** An exact term in the question cannot
+  outrank a semantically diffuse match, which causes the first failure above.
+- **Single user, single machine.** Retrieval scans every chunk on each query.
+  That is fine at 21 chunks and is not intended to scale.
+- **Only the Windows path is tested.** The SDK is installed here as
+  `foundry-local-sdk-winml`; other platforms use a different package and were
+  not verified.
+- **The test set is a development set.** Four of the five tuning decisions were
+  made while looking at these ten questions, so 8/10 measures a system tuned
+  against them rather than a general quality estimate.
+
+Typical answer latency is 2.0–3.3 seconds. Questions rejected by the threshold
+return in 0.3 seconds, since the chat model is never invoked.
 
 ## License
+
 MIT — see [LICENSE](LICENSE).
