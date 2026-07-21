@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import ingest
 import retrieve
 from retrieve import cosine_similarity, get_top_chunks
 
@@ -37,6 +38,17 @@ def test_scale_does_not_change_score():
 
 def test_zero_vector_scores_zero():
     assert cosine_similarity([0.0, 0.0], [1.0, 2.0]) == pytest.approx(0.0)
+
+
+def test_vectors_of_different_lengths_raise():
+    """Silently comparing a truncated prefix would produce plausible nonsense."""
+    with pytest.raises(ValueError, match="length mismatch"):
+        cosine_similarity([1.0, 2.0, 3.0], [1.0, 2.0])
+
+
+def test_ingest_and_retrieve_agree_on_the_database_path():
+    """ingest.py writes the database that retrieve.py reads."""
+    assert ingest.DB_PATH == retrieve.DB_PATH
 
 
 def test_get_top_chunks_ranks_by_similarity(monkeypatch):
