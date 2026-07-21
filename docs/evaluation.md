@@ -297,13 +297,20 @@ short-circuits before the chat model is called.
 different model than the stored chunks. Nothing detects this: `zip(vec_a, vec_b)`
 in `cosine_similarity` stops at the shorter sequence, so vectors of different
 dimensions are silently compared over their common prefix and produce
-meaningless scores without raising an error. The constant should live in one
-place and a dimension check should be added. Tracked for Issue #18.
+meaningless scores without raising an error.
+
+Fixed in #18. The copy in `src/retrieve.py` turned out to be dead code — the
+module never used it — so it was deleted rather than abstracted, leaving
+`src/ingest.py` as the single owner. `cosine_similarity` now raises `ValueError`
+on a length mismatch, naming the cause and the fix in the message.
 
 **No test pins the threshold boundary.** `tests/test_answer.py` uses 0.32 for
 the low case and 0.83 for the high case, both far from the threshold, so
 changing `SIMILARITY_THRESHOLD` from 0.6 to 0.5 passed the suite silently.
-Tracked for Issue #18.
+
+Fixed in #18 with two tests written against the constant (a score equal to the
+threshold reaches the model, a score just below it does not) and one that pins
+the calibrated value itself, so changing it requires a deliberate edit.
 
 ---
 

@@ -9,17 +9,23 @@ import math
 import sqlite3
 from pathlib import Path
 
-from foundry_local_sdk import Configuration, FoundryLocalManager
-
 DB_PATH = Path("rag.db")
-EMBEDDING_MODEL = "qwen3-embedding-0.6b"
 TOP_K = 3
 
 def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     """Return the cosine similarity between two vectors.
 
     1.0 means identical direction (same meaning); values near 0 mean the vectors are unrelated.
+
+    Raises ValueError if the vectors have different lengths, which means the
+    query and the stored chunks were embedded with different models.
     """
+    if len(vec_a) != len(vec_b):
+        raise ValueError(
+            f"Vector length mismatch: {len(vec_a)} != {len(vec_b)}. "
+            "The query and the stored chunks were embedded with different "
+            "models; re-run src/ingest.py to rebuild the database."
+        )
     dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
     norm_a = math.sqrt(sum(a * a for a in vec_a))
     norm_b = math.sqrt(sum(b * b for b in vec_b))
