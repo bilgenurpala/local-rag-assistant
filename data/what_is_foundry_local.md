@@ -2,7 +2,14 @@ Foundry Local is an end-to-end local AI solution for shipping applications that 
 
 With Foundry Local, user data never leaves the device, responses start immediately with zero network latency, and applications keep working offline. There are no per-token costs and no backend infrastructure to maintain.
 
-Foundry Local runs inference through ONNX Runtime. The runtime adds approximately 20 MB to the application package, which makes it practical to embed AI directly into applications where size matters. Models download automatically on first use, are cached locally for instant subsequent launches, and the best-performing variant is selected for the user's specific hardware.
+Foundry Local runs inference through ONNX Runtime. ONNX Runtime is the
+inference runtime that executes every model in Foundry Local, and it adds
+approximately 20 MB to the application package, which makes it practical to
+embed AI directly into applications where size matters.
+
+Foundry Local downloads models automatically on first use and caches them
+locally for instant subsequent launches, selecting the best-performing variant
+for the user's specific hardware.
 
 Foundry Local detects the available hardware on the user's device and selects the best execution provider. It accelerates inference on GPUs and NPUs when available and falls back to CPU seamlessly, with no hardware detection code required.
 

@@ -9,17 +9,24 @@ from foundry_local_sdk import FoundryLocalManager
 
 from ingest import setup_embedding_client
 
-CHAT_MODEL = "qwen2.5-0.5b"
+CHAT_MODEL = "qwen2.5-1.5b"
 
 FALLBACK_ANSWER = "I don't know based on the provided documentation."
-SIMILARITY_THRESHOLD = 0.6
+SIMILARITY_THRESHOLD = 0.5
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant for Microsoft Foundry Local documentation.\n"
     "Answer using ONLY the context below.\n"
-    "If the context does not actually answer the question, reply with exactly:\n"
+    "\n"
+    "First decide whether the context explicitly states the answer. Being about\n"
+    "a related topic is not enough: if the context describes a different\n"
+    "capability, or touches the question only in passing, it does not answer it.\n"
+    "Never describe a step, method, or feature that is not written in the context.\n"
+    "\n"
+    "If the context does not explicitly answer the question, reply with exactly:\n"
     f'"{FALLBACK_ANSWER}"\n'
-    "Do not use outside knowledge. Do not guess.\n"
+    "Otherwise answer in at most three sentences, using only what the context\n"
+    "states. Do not use outside knowledge. Do not guess.\n"
     "\n"
     "Context:\n"
     "{context}"
