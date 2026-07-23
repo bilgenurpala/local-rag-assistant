@@ -222,6 +222,16 @@ To use custom content, add UTF-8 `.md` or `.txt` files to `data/` and run
 ingestion again. Short, self-contained, single-topic paragraphs generally
 retrieve more reliably than long multi-topic passages.
 
+## Public interface demo
+
+Explore the
+[Foundry Local Guide public demo](https://foundry-local-guide-demo.blgnrylmzr13192.chatgpt.site)
+to preview the documentation experience and responsive chat interface.
+
+The hosted version uses example responses because the Foundry Local runtime,
+models, knowledge base, and RAG pipeline remain on the local device. Run the
+application below to use real document retrieval and on-device generation.
+
 ## Run the web application
 
 ```powershell
