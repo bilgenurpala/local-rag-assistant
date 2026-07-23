@@ -19,7 +19,7 @@ technical report.
 
 | Area | Implementation |
 |---|---|
-| Interface | Interactive command-line application |
+| Interface | Documentation web app, JSON API, and CLI |
 | Chat model | `qwen2.5-1.5b` |
 | Embedding model | `qwen3-embedding-0.6b` |
 | Data store | SQLite |
@@ -30,7 +30,7 @@ technical report.
 | Source attribution | Filename retained from ingestion to final answer |
 | Development evaluation | 8/10 |
 | Frozen blind evaluation | 7/10 |
-| Automated tests | 30 tests |
+| Automated tests | 38 tests |
 
 ## Architecture
 
@@ -134,11 +134,15 @@ For supported answers, the application appends a stable, de-duplicated source
 list. If the model itself returns the exact fallback, unrelated retrieved files
 are not printed as sources.
 
-### 4. Command-line interface
+### 4. Web application and CLI
 
-[`src/main.py`](src/main.py) loads both models once, reuses them for the entire
-session, rejects empty input, and unloads model resources on normal exit,
-end-of-file, interruption, or setup failure.
+[`src/web.py`](src/web.py) provides a FastAPI backend with health, source, and
+question-answering endpoints. The responsive interface in `web/` combines a
+Foundry Local learning guide with a source-aware AI assistant. Models load
+lazily on the first question and are reused for the server session.
+
+[`src/main.py`](src/main.py) remains available as a lightweight terminal
+interface. Both interfaces use the same retrieval and answer pipeline.
 
 Example:
 
@@ -218,7 +222,48 @@ To use custom content, add UTF-8 `.md` or `.txt` files to `data/` and run
 ingestion again. Short, self-contained, single-topic paragraphs generally
 retrieve more reliably than long multi-topic passages.
 
-## Run the assistant
+## Run the web application
+
+```powershell
+python -m uvicorn web:app --app-dir src --reload
+```
+
+Open `http://127.0.0.1:8000`. The page includes:
+
+- A structured Foundry Local learning guide
+- Local RAG architecture explanation
+- Python SDK quickstart
+- Offline and privacy guidance
+- Knowledge-source inventory
+- Suggested questions and a live AI chat panel
+- Source-aware answers without exposing internal filenames in the chat
+
+The JSON API is available at:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/health` | Report whether local models are loaded |
+| `GET /api/sources` | List knowledge-base documents |
+| `POST /api/ask` | Answer a documentation question |
+
+Example request:
+
+```json
+{
+  "question": "Do I need an Azure subscription?"
+}
+```
+
+Example response:
+
+```json
+{
+  "answer": "No. Foundry Local runs on local hardware.",
+  "sources": ["azure_and_privacy.md", "what_is_foundry_local.md"]
+}
+```
+
+## Run the CLI
 
 ```powershell
 python src\main.py
@@ -232,7 +277,7 @@ Type a question at the prompt. Type `exit` or `quit` to stop.
 pytest
 ```
 
-The 30-test suite runs without loading a model. It covers:
+The 38-test suite runs without loading a model. It covers:
 
 - Paragraph chunking and document loading
 - SQLite schema creation, migration, and idempotent rebuilds
@@ -243,6 +288,9 @@ The 30-test suite runs without loading a model. It covers:
 - Exact fallback behavior
 - Empty CLI input and model cleanup
 - Frozen blind-evaluation acceptance rules
+- Web response parsing and source serialization
+- FastAPI health and question-answering endpoints
+- Static web interface delivery
 
 ## Evaluation
 
@@ -323,8 +371,10 @@ local-rag-assistant/
 |   |-- ingest.py                      Chunk, embed, and store
 |   |-- retrieve.py                    Rank relevant chunks
 |   |-- answer.py                      Ground and attribute answers
+|   |-- web.py                         FastAPI and static web server
 |   `-- main.py                        Interactive CLI
 |-- tests/                             Automated test suite
+|-- web/                               Documentation and chat interface
 |-- requirements.txt                   Windows/WinML dependencies
 `-- requirements-cross-platform.txt    Cross-platform dependencies
 ```

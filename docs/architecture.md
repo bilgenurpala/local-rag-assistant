@@ -40,7 +40,7 @@ exchange and is the core constraint the rest of this architecture is built aroun
 
 | Component | Responsibility | Technology |
 |---|---|---|
-| Interface | Receives the user's question, displays the answer | CLI (or optional web UI) |
+| Interface | Presents documentation, receives questions, displays answers and sources | FastAPI web app + CLI |
 | Ingestion pipeline | Chunks documents, generates embeddings, stores them | Python + Foundry Local |
 | Data layer | Stores text chunks and their vectors | SQLite |
 | Retrieval | Finds the chunks most relevant to the question | Embedding + vector similarity |
@@ -69,7 +69,7 @@ The main RAG loop that runs every time the user asks a question:
 
 ```mermaid
 flowchart LR
-    U(["User question"]) --> UI["Interface (CLI / web)"]
+    U(["User question"]) --> UI["Documentation page / CLI"]
     UI --> QE["Embed the question (Foundry Local)"]
     QE --> VS["Vector search"]
     DB[("SQLite: source + text + vector")] --> VS
