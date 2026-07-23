@@ -25,8 +25,10 @@ def main() -> None:
     model, client = setup_embedding_client()
 
     print(f"Q: {QUESTION}  (top {TOP_K})\n")
-    for rank, (score, content) in enumerate(get_top_chunks(QUESTION, client, TOP_K), start=1):
-        print(f"{rank}. {score:.3f}  {content[:150]}...\n")
+    for rank, (score, content, source) in enumerate(
+        get_top_chunks(QUESTION, client, TOP_K), start=1
+    ):
+        print(f"{rank}. {score:.3f}  [{source}] {content[:150]}...\n")
 
     model.unload()
 

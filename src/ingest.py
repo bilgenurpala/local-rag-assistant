@@ -1,7 +1,7 @@
 """Ingest knowledge base documents into the vector store.
 
 Reads every .md and .txt file in data/, splits each into paragraph chunks, 
-embeds each chunk, and stores (content, embedding) rows in SQLite. 
+embeds each chunk, and stores (source, content, embedding) rows in SQLite.
 The table is rebuilt from scratch on every run (idempotent).
 """
 
@@ -44,11 +44,19 @@ def setup_database(db_path: Path = DB_PATH) -> sqlite3.Connection:
     """
     connection = sqlite3.connect(db_path)
     connection.execute(
-        "CREATE TABLE IF NOT EXISTS chunks(" 
-        "id INTEGER PRIMARY KEY," 
-        "content TEXT NOT NULL," 
+        "CREATE TABLE IF NOT EXISTS chunks("
+        "id INTEGER PRIMARY KEY,"
+        "source TEXT NOT NULL,"
+        "content TEXT NOT NULL,"
         "embedding TEXT NOT NULL)"
     )
+    columns = {
+        row[1] for row in connection.execute("PRAGMA table_info(chunks)").fetchall()
+    }
+    if "source" not in columns:
+        connection.execute(
+            "ALTER TABLE chunks ADD COLUMN source TEXT NOT NULL DEFAULT 'unknown'"
+        )
     connection.execute("DELETE FROM chunks")
     connection.commit()
     return connection
@@ -71,27 +79,33 @@ def main() -> None:
     documents = load_documents()
     print(f"Found {len(documents)} documents in {DATA_DIR}/")
 
-    model, client = setup_embedding_client()
-    connection = setup_database()
-
+    model = None
+    connection = None
     total_chunks = 0
-    for filename, text in documents:
-        paragraphs = split_into_paragraphs(text)
-        for paragraph in paragraphs:
-            response = client.generate_embedding(paragraph)
-            vector = response.data[0].embedding
-            connection.execute(
-                "INSERT INTO chunks (content, embedding) VALUES (?, ?)",
-                (paragraph, json.dumps(vector)),
-            )
-        total_chunks += len(paragraphs)
-        print(f" {filename}: {len(paragraphs)} chunks")
-    
-    connection.commit()
-    connection.close()
-    model.unload()
+    try:
+        model, client = setup_embedding_client()
+        connection = setup_database()
+
+        for filename, text in documents:
+            paragraphs = split_into_paragraphs(text)
+            for paragraph in paragraphs:
+                response = client.generate_embedding(paragraph)
+                vector = response.data[0].embedding
+                connection.execute(
+                    "INSERT INTO chunks "
+                    "(source, content, embedding) VALUES (?, ?, ?)",
+                    (filename, paragraph, json.dumps(vector)),
+                )
+            total_chunks += len(paragraphs)
+            print(f" {filename}: {len(paragraphs)} chunks")
+
+        connection.commit()
+    finally:
+        if connection is not None:
+            connection.close()
+        if model is not None:
+            model.unload()
     print(f"Done. {total_chunks} chunks written to {DB_PATH}")
 
 if __name__ == "__main__":
     main()
-    

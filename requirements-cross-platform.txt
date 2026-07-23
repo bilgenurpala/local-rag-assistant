@@ -1,0 +1,2 @@
+foundry-local-sdk==1.2.3
+pytest==9.1.1

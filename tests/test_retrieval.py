@@ -53,9 +53,9 @@ def test_ingest_and_retrieve_agree_on_the_database_path():
 
 def test_get_top_chunks_ranks_by_similarity(monkeypatch):
     fake_chunks = [
-        (1, "about licensing", [0.0, 1.0]),
-        (2, "about installation", [1.0, 0.0]),
-        (3, "half related", [1.0, 1.0]),
+        (1, "licensing.md", "about licensing", [0.0, 1.0]),
+        (2, "installation.md", "about installation", [1.0, 0.0]),
+        (3, "overview.md", "half related", [1.0, 1.0]),
     ]
     monkeypatch.setattr(retrieve, "load_chunks", lambda: fake_chunks)
     client = FakeEmbeddingClient([1.0, 0.0])
@@ -64,5 +64,6 @@ def test_get_top_chunks_ranks_by_similarity(monkeypatch):
 
     assert len(results) == 2
     assert results[0][1] == "about installation"
+    assert results[0][2] == "installation.md"
     assert results[1][1] == "half related"
     

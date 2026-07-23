@@ -1,0 +1,118 @@
+{
+  "method": "Frozen ten-question blind set: five answerable and five unanswerable. Configuration was not tuned after this run.",
+  "passed": 7,
+  "total": 10,
+  "results": [
+    {
+      "id": 1,
+      "question": "Where are prompts and model outputs processed during normal inference?",
+      "answerable": true,
+      "expected_terms": [
+        "device"
+      ],
+      "answer": "Prompts and model outputs are processed locally on the device when running Foundry Local inference. This means they are handled without being transmitted to Microsoft's servers.\n\nSources: azure_and_privacy.md, what_is_foundry_local.md, platforms_and_models.md",
+      "top_score": 0.75,
+      "latency_seconds": 3.11,
+      "automatic_pass": true
+    },
+    {
+      "id": 2,
+      "question": "When can Foundry Local still need an internet connection after setup?",
+      "answerable": true,
+      "expected_terms": [
+        "download"
+      ],
+      "answer": "Foundry Local operates offline by default; there is no requirement for an internet connection once set up. Applications continue to work without network connectivity until manually disabled.\n\nSources: what_is_foundry_local.md",
+      "top_score": 0.705,
+      "latency_seconds": 3.01,
+      "automatic_pass": false
+    },
+    {
+      "id": 3,
+      "question": "What happens when a supported GPU or NPU accelerator is unavailable?",
+      "answerable": true,
+      "expected_terms": [
+        "cpu"
+      ],
+      "answer": "When a supported GPU or NPU accelerator is unavailable, the runtime of Foundry Local can fall back to CPU execution [Source: troubleshooting.md]. This allows the system to retain functionality while potentially slowing down due to the lack of accelerated processing power.\n\nSources: troubleshooting.md, what_is_foundry_local.md",
+      "top_score": 0.713,
+      "latency_seconds": 3.39,
+      "automatic_pass": true
+    },
+    {
+      "id": 4,
+      "question": "Which method gives a chat client after a model has been loaded?",
+      "answerable": true,
+      "expected_terms": [
+        "get_chat_client"
+      ],
+      "answer": "The `get_chat_client` method gives a chat client after a model has been loaded. This method returns either a complete response or streams the answer token by token when called. After loading the model, the model is unmounted from memory with the `unload` method.\n\nSources: getting_started.md, what_is_foundry_local.md",
+      "top_score": 0.85,
+      "latency_seconds": 3.78,
+      "automatic_pass": true
+    },
+    {
+      "id": 5,
+      "question": "Why is the Foundry Local model catalog curated instead of open-ended?",
+      "answerable": true,
+      "expected_terms": [
+        "production",
+        "consumer hardware"
+      ],
+      "answer": "The Foundry Local model catalog is curated rather than open-ended because the product is designed for shipping production applications [Source: platforms_and_models.md]. This approach ensures that models are tested across a variety of consumer hardware and distributed to end users, maintaining reliable performance when embedded in applications [Source: platforms_and_models.md].\n\nSources: platforms_and_models.md, what_is_foundry_local.md",
+      "top_score": 0.843,
+      "latency_seconds": 3.92,
+      "automatic_pass": true
+    },
+    {
+      "id": 6,
+      "question": "Does Foundry Local encrypt the application's SQLite database?",
+      "answerable": false,
+      "expected_terms": [],
+      "answer": "I don't know based on the provided documentation.\n\nSources: what_is_foundry_local.md, getting_started.md",
+      "top_score": 0.688,
+      "latency_seconds": 2.31,
+      "automatic_pass": true
+    },
+    {
+      "id": 7,
+      "question": "Can Foundry Local import and parse PDF files automatically?",
+      "answerable": false,
+      "expected_terms": [],
+      "answer": "I don't know based on the provided documentation.\n\nSources: what_is_foundry_local.md, platforms_and_models.md",
+      "top_score": 0.699,
+      "latency_seconds": 2.66,
+      "automatic_pass": true
+    },
+    {
+      "id": 8,
+      "question": "What is the maximum number of chat messages in one request?",
+      "answerable": false,
+      "expected_terms": [],
+      "answer": "I don't know based on the provided documentation.\n\nSources: getting_started.md, what_is_foundry_local.md, platforms_and_models.md",
+      "top_score": 0.571,
+      "latency_seconds": 2.69,
+      "automatic_pass": true
+    },
+    {
+      "id": 9,
+      "question": "Which license applies to every model in the catalog?",
+      "answerable": false,
+      "expected_terms": [],
+      "answer": "\"Every model in the Foundry Local catalog goes through extensive quantization and compression to deliver the best balance of quality and performance on consumer devices.\" This sentence indicates that all models have undergone rigorous testing and optimization processes but does not specify any particular licensing terms beyond their suitability for consumer device usage. Therefore, without additional information, we cannot determine which specific license applies to every model in the catalog.\n\nSources: platforms_and_models.md, troubleshooting.md",
+      "top_score": 0.588,
+      "latency_seconds": 4.55,
+      "automatic_pass": false
+    },
+    {
+      "id": 10,
+      "question": "How do I deploy this assistant to Kubernetes?",
+      "answerable": false,
+      "expected_terms": [],
+      "answer": "To deploy the Assistant to Kubernetes, you would need to follow these steps:\n\n1. **Set Up Your Kubernetes Cluster**: Ensure your cluster meets the prerequisites for running the Assistant. This typically involves setting up an environment where Kubernetes components are deployed.\n\n2. **Prepare Your Application**: Prepare your application (the Assistant) to be containerized. You may need to create Docker images for your application services.\n\n3. **Deploy the Containerized Services**:\n   - Create a deployment configuration file (`deployment.yaml`) that specifies how many replicas should run and other details like image name, port number, etc.\n   - Apply the YAML file to your Kubernetes cluster using `kubectl apply -f <deployment.yaml>`.\n\n4. **Configure Service Endpoints**: Set up service endpoints so that external clients can access the deployed services. For example, you might expose the API via a load balancer or directly from the pods.\n\n5. **Monitor and Maintain**: Use tools like `kubectl` to monitor the status of your deployments and ensure everything is working correctly.\n\n6. **Update and Scale**: As needed, update the deployment configurations to add new instances or scale existing ones according to demand.\n\nBy following these steps, you can successfully deploy the Assistant to a Kubernetes cluster. Note that specific instructions will depend on the version of Kubernetes you're using and any additional requirements imposed by the platform.\n\nSources: what_is_foundry_local.md, platforms_and_models.md, azure_and_privacy.md",
+      "top_score": 0.618,
+      "latency_seconds": 10.11,
+      "automatic_pass": false
+    }
+  ]
+}

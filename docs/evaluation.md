@@ -341,3 +341,24 @@ measures a system that has been tuned against them. A second set of ten
 questions, written to the same design and run once against the frozen
 configuration, is needed before the number can be read as a general quality
 estimate.
+
+---
+
+## 10. Blind validation addendum
+
+A second frozen set was subsequently authored and run once without changing the
+model, similarity threshold, Top-K value, or system prompt. It contains five
+answerable and five unsupported questions and is implemented in
+`prototypes/blind_evaluation_run.py`. It was run against the final 26-chunk,
+5-file corpus after source attribution was added.
+
+The result was **7/10**: four of five answerable questions and three of five
+unsupported questions passed. The failures were an incorrect absolute offline
+claim, a failure to use the exact fallback for an unspecified catalog license,
+and a fully hallucinated Kubernetes deployment procedure. Full raw outputs,
+scores, and timings are preserved in `blind-evaluation-results.json`; the
+method and failure analysis are in `blind-evaluation.md`.
+
+This result is validation evidence, not another optimization round. The corpus,
+prompt, models, retrieval settings, and frozen questions were not changed in
+response to it.

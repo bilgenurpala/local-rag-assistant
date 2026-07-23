@@ -229,3 +229,30 @@ buffer: the answer doesn't need rank 1, it needs to be inside the top K.
   same feature used deliberately to split long SQL strings in ingest.py. No
   error is raised; only the odd output revealed it. Habit adopted: trailing
   commas on every list line.
+
+## Final hardening
+
+### Decision: Carry source filenames through the full RAG pipeline
+
+**Context:** The first complete version stored only chunk text and embeddings,
+so users could not verify which document contributed to an answer.
+
+**Decision:** Add a non-null `source` column with a legacy-schema migration,
+return `(score, content, source)` retrieval results, label every context passage,
+and print a stable de-duplicated source list. Exact fallback responses do not
+print unrelated retrieved sources.
+
+**Outcome:** Source attribution is deterministic and covered by ingestion,
+retrieval, context, fallback, and formatting tests.
+
+### Decision: Freeze and run a second evaluation set once
+
+**Context:** The original 8/10 set had influenced four configuration changes and
+was therefore a development set.
+
+**Decision:** Author five new answerable and five new unsupported questions,
+freeze their acceptance checks, and run them once without further tuning.
+
+**Outcome:** The blind result was 7/10. It confirmed that an instruction-only
+grounding rule still fails on some domain-adjacent questions. The raw answers
+and scores are retained in `docs/blind-evaluation-results.json`.

@@ -55,7 +55,7 @@ unless the documents change.
 flowchart LR
     D[("data/ documents")] --> C["Chunking"]
     C --> E["Generate embeddings (Foundry Local)"]
-    E --> DB[("SQLite: text + vector")]
+    E --> DB[("SQLite: source + text + vector")]
 
     classDef store fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
     classDef process fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#4c1d95
@@ -72,11 +72,11 @@ flowchart LR
     U(["User question"]) --> UI["Interface (CLI / web)"]
     UI --> QE["Embed the question (Foundry Local)"]
     QE --> VS["Vector search"]
-    DB[("SQLite: text + vector")] --> VS
+    DB[("SQLite: source + text + vector")] --> VS
     VS --> TK["Top 2-3 chunks"]
     TK --> AP["Augmented prompt: question + context"]
     AP --> LLM["Foundry Local LLM (on-device)"]
-    LLM --> ANS(["Answer"])
+    LLM --> ANS(["Answer + source files"])
     ANS --> UI
 
     classDef io fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
@@ -95,7 +95,8 @@ flowchart LR
 
 - **Offline-first:** After setup, no step requires the internet.
 - **Source-grounded answers:** The model answers only from the retrieved context;
-  if the context is insufficient, it says "I don't know." This reduces hallucination.
+  if the context is insufficient, it says "I don't know." Each retrieved passage
+  retains its filename, and supported answers print a deterministic source list.
 - **Simplicity:** For a small dataset, vectors loaded from SQLite are compared in
   memory; if scale grows, migrating to a dedicated vector database can be considered.
 - **Speed priority:** A small model is chosen; the goal is fast feedback.
