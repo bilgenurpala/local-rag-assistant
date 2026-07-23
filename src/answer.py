@@ -26,16 +26,23 @@ SYSTEM_PROMPT = (
     "If the context does not explicitly answer the question, reply with exactly:\n"
     f'"{FALLBACK_ANSWER}"\n'
     "Otherwise answer in at most three sentences, using only what the context\n"
-    "states. Do not use outside knowledge. Do not guess.\n"
+    "states. Cite supporting source labels in square brackets. Do not use outside\n"
+    "knowledge. Do not guess.\n"
     "\n"
     "Context:\n"
     "{context}"
 )
 
 
-def build_context(chunks: list[tuple[float, str]]) -> str:
-    """Join retrieved (score, content) pairs into one context block."""
-    return "\n\n---\n\n".join(content for score, content in chunks)
+def build_context(chunks: list[tuple[float, str, str]]) -> str:
+    return "\n\n---\n\n".join(
+        f"[Source: {source}]\n{content}" for score, content, source in chunks
+    )
+
+
+def format_sources(chunks: list[tuple[float, str, str]]) -> str:
+    sources = list(dict.fromkeys(source for score, content, source in chunks))
+    return "Sources: " + ", ".join(sources)
 
 def setup_chat_client():
     """Return the chat model and client from the already-initialized manager."""
@@ -59,7 +66,10 @@ def answer_query(question: str, embedding_client, chat_client) -> str:
         {"role": "user", "content": question},
     ]
     response = chat_client.complete_chat(messages)
-    return response.choices[0].message.content
+    answer = response.choices[0].message.content.strip()
+    if answer.strip('"') == FALLBACK_ANSWER:
+        return FALLBACK_ANSWER
+    return f"{answer}\n\n{format_sources(top_chunks)}"
 
 
 def main() -> None:

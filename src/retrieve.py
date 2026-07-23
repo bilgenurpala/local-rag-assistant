@@ -33,32 +33,39 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
         return 0.0
     return dot_product / (norm_a * norm_b)
 
-def load_chunks(db_path: Path = DB_PATH) -> list[tuple[int, str, list[float]]]:
+def load_chunks(
+    db_path: Path = DB_PATH,
+) -> list[tuple[int, str, str, list[float]]]:
     """Load all chunks from the database.
     
-    Returns (id, content, vector) tuples, with each stored JSON
+    Returns (id, source, content, vector) tuples, with each stored JSON
     embedding parsed back into a list of floats.
     """
     connection = sqlite3.connect(db_path)
     rows = connection.execute(
-        "SELECT id, content, embedding FROM chunks"
+        "SELECT id, source, content, embedding FROM chunks"
     ).fetchall()
     connection.close()
-    return [(cid, content, json.loads(emb)) for cid, content, emb in rows]
+    return [
+        (cid, source, content, json.loads(emb))
+        for cid, source, content, emb in rows
+    ]
 
-def get_top_chunks(query: str, client, top_k: int = TOP_K) -> list[tuple[float, str]]:
+def get_top_chunks(
+    query: str, client, top_k: int = TOP_K
+) -> list[tuple[float, str, str]]:
     """Return the topk-k most relevant chunks for a query.
     
     Embeds the query, scores every stored chunk with cosine
-    similarity, and returns (score, content) pairs, best first.
+    similarity, and returns (score, content, source) tuples, best first.
     """
     response = client.generate_embedding(query)
     query_vector = response.data[0].embedding
 
     scored = []
-    for cid, content, vector in load_chunks():
+    for cid, source, content, vector in load_chunks():
         score = cosine_similarity(query_vector, vector)
-        scored.append((score, content))
+        scored.append((score, content, source))
     scored.sort(key=lambda pair: pair[0], reverse=True)
     return scored[:top_k]
 
@@ -75,7 +82,7 @@ if __name__ == "__main__":
 
     for question in questions:
         print(f"\nQ: {question}")
-        for score, content in get_top_chunks(question, client):
-            print(f"  {score:.3f}  {content[:80]}...")
+        for score, content, source in get_top_chunks(question, client):
+            print(f"  {score:.3f}  [{source}] {content[:80]}...")
 
     model.unload()

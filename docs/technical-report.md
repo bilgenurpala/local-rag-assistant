@@ -92,9 +92,10 @@ The full design rationale and the two data-flow diagrams are in
 
 **Preparation.** `ingest.py` reads every `.md` and `.txt` file in `data/`,
 splits each on blank lines into paragraph chunks, embeds each chunk with
-`qwen3-embedding-0.6b`, and writes `(content, embedding)` rows to SQLite with
-the vector serialised as JSON text. The table is cleared and rebuilt on every
-run, so ingestion is idempotent.
+`qwen3-embedding-0.6b`, and writes `(source, content, embedding)` rows to SQLite
+with the vector serialised as JSON text. The source filename is carried through
+retrieval into the final answer. The table is cleared and rebuilt on every run,
+so ingestion is idempotent.
 
 **Runtime.** `answer_query()` embeds the question, scores it against every
 stored chunk with a hand-written cosine similarity, and takes the top 3. If the
@@ -117,9 +118,9 @@ test set that only triggers the first would report a misleadingly high score.
 | Embedding model | `qwen3-embedding-0.6b` (1024-dim) |
 | Similarity threshold | `0.5` |
 | Top-K | `3` |
-| Knowledge base | 21 chunks across 4 files |
+| Knowledge base | 26 chunks across 5 files |
 | Vector storage | JSON text in SQLite, brute-force cosine similarity |
-| System prompt | Explicit decision step, three-sentence limit |
+| System prompt | Explicit decision step, three-sentence limit, source labels |
 
 Every one of these values except Top-K was changed at least once as a result of
 measurement. The path is in section 6.
@@ -145,7 +146,7 @@ function was later promoted from the prototype into `src/retrieve.py`.
 
 **Vectors stored as JSON text in SQLite.** SQLite columns hold simple types, not
 Python lists, so each vector is serialised with `json.dumps` and parsed back
-with `json.loads`. At 21 chunks a dedicated vector database would have added a
+with `json.loads`. At 26 chunks a dedicated vector database would have added a
 dependency and a deployment step in exchange for nothing measurable.
 
 **Brute-force search.** Every chunk is scored on every query. This is
@@ -159,7 +160,7 @@ created once at startup and reused. The same choice makes retrieval testable: a
 fake client can be passed in and the scoring logic tested without loading a
 model.
 
-**The knowledge base was authored, not scraped.** Four short Markdown files were
+**The knowledge base was authored, not scraped.** Five short Markdown files were
 compiled from the official documentation under three rules: no headings, one
 topic per paragraph, every paragraph self-contained and naming "Foundry Local"
 explicitly rather than using pronouns. The reasoning is that the chunker splits
@@ -354,15 +355,15 @@ the cause of the discrimination problem.
 - **Both remaining failures are confident wrong answers, not refusals.** For a
   documentation assistant this is worse than a refusal, because a user cannot
   tell the failure from a success.
-- **No source attribution.** The `chunks` table stores no source column, so
-  answers cannot name the file they came from. This was scoped out rather than
-  overlooked; it requires a schema change propagated through ingestion,
-  retrieval and generation.
+- **Source attribution identifies retrieved files, not exact sentences.** The
+  filename now travels from ingestion through retrieval and appears in the
+  answer. The deterministic list makes answers auditable, but it does not prove
+  that every generated claim is supported by those files.
 - **Retrieval is purely semantic.** An exact term in the question cannot outrank
   a semantically diffuse match.
-- **The test set is a development set.** Four of the five configuration changes
-  were chosen while looking at these ten questions, so 8/10 measures a system
-  tuned against them. It is not yet a general quality estimate.
+- **The original test set is a development set.** Four of the five configuration
+  changes were chosen while looking at those ten questions. A later frozen blind
+  set scored 7/10 and confirms that grounding remains the main weakness.
 - **Model choice was constrained by the hardware.** `qwen2.5-7b` could not be
   downloaded on the development machine, which is why the ladder stopped at
   1.5B. For software intended to run on end-user hardware, which model can
@@ -371,7 +372,7 @@ the cause of the discrimination problem.
   `foundry-local-sdk-winml`; other platforms use a different package, which was
   not verified.
 - **Single user, single machine.** Every chunk is scanned on every query. This is
-  correct at 21 chunks and is not intended to scale.
+  correct at 26 chunks and is not intended to scale.
 
 ---
 
@@ -391,13 +392,9 @@ In the order the evidence supports:
    that answers the question and return the fallback when it cannot. This
    attacks the composition failure mechanically rather than by instruction,
    which section 7 shows instruction alone does not reach.
-3. **A second, blind test set.** Ten new questions written to the same design
-   and run once against the frozen configuration. Until then 8/10 is a
-   development figure.
-4. **Source attribution.** Add a `source` column at ingestion and carry the
-   filename through retrieval into the printed answer. Independently valuable:
-   it turns every answer into something the reader can verify.
-5. **Web interface.** A page of Foundry Local documentation with an assistant
+3. **Evidence-level citations.** Source filenames are now present. The next step
+   is to associate each generated claim with the exact supporting passage.
+4. **Web interface.** A page of Foundry Local documentation with an assistant
    beside it, so a reader who gets stuck on a term can ask in place. A thin
    shell over `answer_query()`; the CLI already provides everything it needs.
 
@@ -430,6 +427,10 @@ The system meets its functional goals: it answers questions about Foundry Local
 from a controlled document set, refuses when the set does not contain the
 answer, and runs offline on a single machine within the 1–3 second latency
 target.
+
+Final hardening added deterministic source filenames and a frozen blind
+evaluation. The blind set scored 7/10, so the system refuses many unsupported
+questions but does not yet do so reliably for every domain-adjacent question.
 
 The more useful outcome is where it fails and why. Both remaining failures are
 retrieval and grounding problems, and neither is reachable by the levers the
