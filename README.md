@@ -457,6 +457,13 @@ The WinML backend expects physical DirectX 12-capable GPU hardware for
 acceleration. A virtual machine without GPU passthrough may need the
 cross-platform SDK instead.
 
+## Presentation video
+
+Watch the short project presentation to learn what was built and what I learned
+during the Microsoft AI Innovators Program:
+
+[Watch the Local RAG Assistant presentation on YouTube](https://youtu.be/bbYbv7VwyW4)
+
 ## Primary references
 
 - [Get started with Foundry Local](https://learn.microsoft.com/en-us/windows/ai/foundry-local/get-started)
